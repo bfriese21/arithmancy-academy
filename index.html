@@ -1,4 +1,5 @@
 <title>Arithmancy Academy</title>
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@400;600;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap">
@@ -310,6 +311,26 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:1px solid #FFF
   margin-bottom:10px;text-shadow:0 0 30px #E0A52677}
 .lucard p{color:var(--parch-dim);font-style:italic;margin-bottom:22px}
 
+/* ---------- lock screen ---------- */
+#gate{position:fixed;inset:0;z-index:200;display:grid;place-items:center;padding:24px;
+  background:radial-gradient(90% 70% at 50% 20%,#1A2247,#070A1C 70%)}
+#gate.open{display:none}
+.gatecard{width:100%;max-width:330px;text-align:center}
+.gatecard svg{width:92px;height:92px;margin:0 auto 20px;display:block;
+  filter:drop-shadow(0 0 34px #E0A52688)}
+.gatecard h2{display:block;font-family:'Cinzel Decorative',serif;font-weight:900;
+  font-size:1.7rem;color:var(--parchment);letter-spacing:0;text-transform:none;
+  margin-bottom:8px}
+.gatecard h2::after{display:none}
+.gatecard p{color:var(--parch-dim);font-style:italic;margin-bottom:22px}
+#gateIn{width:100%;background:#0B1026;border:1.5px solid var(--line);border-radius:12px;
+  color:var(--gold-hi);font-family:'Cinzel',serif;font-size:1.15rem;font-weight:700;
+  letter-spacing:.14em;text-align:center;padding:15px 12px;margin-bottom:12px;
+  -webkit-tap-highlight-color:transparent}
+#gateIn:focus{outline:none;border-color:var(--gold);box-shadow:0 0 22px #E0A52644}
+#gateIn::placeholder{color:#3E4870;letter-spacing:.1em;font-weight:400}
+#gate.bad .gatecard{animation:shake .4s}
+#gateMsg{min-height:22px;margin-top:12px;font-style:italic;color:#E08A6A;font-size:.94rem}
 @media (max-width:520px){
   .gnum{grid-template-columns:repeat(4,1fr)}
   .scoregrid{grid-template-columns:repeat(3,1fr)}
@@ -321,6 +342,17 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:1px solid #FFF
 }
 </style>
 
+<div id="gate">
+  <div class="gatecard">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="14" y="28" width="36" height="28" rx="5" fill="none" stroke="#E0A526" stroke-width="3"/><path d="M22 28V20a10 10 0 0 1 20 0v8" fill="none" stroke="#E0A526" stroke-width="3"/><circle cx="32" cy="40" r="4.5" fill="#F5C95A"/><path d="M32 44v6" stroke="#F5C95A" stroke-width="3.4" stroke-linecap="round"/></svg>
+    <h2>The Door is Locked</h2>
+    <p>Speak the charm to enter.</p>
+    <input id="gateIn" type="password" inputmode="text" autocomplete="off"
+           autocapitalize="none" spellcheck="false" placeholder="password">
+    <button class="btn" id="gateGo">Unlock</button>
+    <div id="gateMsg"></div>
+  </div>
+</div>
 <canvas id="sky"></canvas>
 <div class="vignette"></div>
 <canvas id="burst"></canvas>
@@ -1315,4 +1347,50 @@ $("openPacksBtn").onclick=openPacks;
 window.openPacks=openPacks;
 $("endBtn").onclick=()=>{if(g.timer)clearInterval(g.timer);finish();};
 paintHouses();paintRail();setMode("questions");
+
+
+/* ══════════════ LOCK SCREEN ══════════════
+   A static page has no server, so this is a keep-out sign rather than real
+   security: it stops casual access, and the stored value is a hash so the
+   page source never shows the word itself. */
+const GATE_SHA="f6cf7f88816a2ec9b06d512d87224c0a7e04f4bc9b0acefbe837af735b4c78e9";
+const GATE_FALLBACK="a8881b7c";          // used only where crypto.subtle is absent (file://)
+const GATE_KEY="arithmancy.unlocked";
+
+function weakHash(t){let h=0;for(const ch of t)h=(h*31+ch.charCodeAt(0))>>>0;return h.toString(16);}
+async function gateCheck(raw){
+  const t=raw.trim().toLowerCase();
+  if(!t)return false;
+  if(window.crypto&&crypto.subtle){
+    try{
+      const buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t));
+      const hex=[...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
+      return hex===GATE_SHA;
+    }catch(e){/* fall through */}
+  }
+  return weakHash(t)===GATE_FALLBACK;
+}
+function gateOpen(){
+  $("gate").classList.add("open");
+  try{ localStorage.setItem(GATE_KEY,"1"); }catch(e){}
+  setTimeout(()=>{ try{ sizeSky(); sizeBurst(); }catch(e){} },30);
+}
+async function gateTry(){
+  const ok=await gateCheck($("gateIn").value);
+  if(ok)return gateOpen();
+  const g=$("gate");
+  $("gateMsg").textContent="That is not the charm. Try again.";
+  $("gateIn").value="";
+  g.classList.remove("bad"); void g.offsetWidth; g.classList.add("bad");
+  $("gateIn").focus();
+}
+$("gateGo").onclick=gateTry;
+$("gateIn").addEventListener("keydown",e=>{ if(e.key==="Enter"){e.preventDefault();gateTry();} });
+(function(){
+  let already=false;
+  try{ already=localStorage.getItem(GATE_KEY)==="1"; }catch(e){}
+  if(already){ $("gate").classList.add("open"); }
+  else{ setTimeout(()=>{ try{$("gateIn").focus();}catch(e){} },120); }
+})();
+
 </script>
