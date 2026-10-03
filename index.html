@@ -1353,8 +1353,8 @@ paintHouses();paintRail();setMode("questions");
    A static page has no server, so this is a keep-out sign rather than real
    security: it stops casual access, and the stored value is a hash so the
    page source never shows the word itself. */
-const GATE_SHA="f6cf7f88816a2ec9b06d512d87224c0a7e04f4bc9b0acefbe837af735b4c78e9";
-const GATE_FALLBACK="a8881b7c";          // used only where crypto.subtle is absent (file://)
+const GATE_SHA="e3a6fe9d9cc0c514356bfabd796403c90fa6d3b7cc04088f3bdd4dc26bd6668b";
+const GATE_FALLBACK="b736876e";          // used only where crypto.subtle is absent (file://)
 const GATE_KEY="arithmancy.unlocked";
 
 function weakHash(t){let h=0;for(const ch of t)h=(h*31+ch.charCodeAt(0))>>>0;return h.toString(16);}
